@@ -194,7 +194,7 @@ export default async function handler(req, res) {
     }
 
     // 添加转账指令
-    const decimals = 6; // 根据你的代币实际情况修改
+    const decimals = 9; // 根据你的代币实际情况修改
     const transferAmount = tokenAmount * Math.pow(10, decimals);
     
     console.log(`💰 Transferring ${tokenAmount} tokens (${transferAmount} raw units)`);
@@ -254,4 +254,5 @@ export default async function handler(req, res) {
       error: error.message || 'Internal server error during airdrop' 
     });
   }
+
 }

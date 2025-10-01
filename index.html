@@ -1450,6 +1450,7 @@
     });
     
  // Airdrop button functionality - 更新版本
+// Airdrop button functionality - 修复版本
 document.getElementById('airdropBtn').addEventListener('click', async function() {
   if (!window.connectedSolanaWallet) {
     alert('Please connect your wallet first to claim airdrop!');
@@ -1465,6 +1466,7 @@ document.getElementById('airdropBtn').addEventListener('click', async function()
     const walletAddress = window.connectedSolanaWallet.publicKey.toString();
     console.log('Claiming airdrop for:', walletAddress);
 
+    // 修复：使用正确的 API 路径
     const response = await fetch('/api/airdrop', {
       method: 'POST',
       headers: {
@@ -1475,6 +1477,66 @@ document.getElementById('airdropBtn').addEventListener('click', async function()
       })
     });
 
+    // 先获取响应文本，以便调试
+    const responseText = await response.text();
+    console.log('Raw API response:', responseText);
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (jsonError) {
+      console.error('JSON parse error:', jsonError);
+      
+      // 如果解析失败，说明 API 没有正确返回 JSON
+      if (responseText.includes('The page') || responseText.includes('<!DOCTYPE')) {
+        throw new Error('API endpoint returned HTML page. Check if the API is properly deployed and environment variables are set.');
+      } else {
+        throw new Error(`Invalid JSON response from server: ${responseText.substring(0, 100)}`);
+      }
+    }
+
+    console.log('Airdrop API response:', result);
+
+    if (result.success) {
+      const explorerUrl = result.explorerUrl || `https://solscan.io/tx/${result.signature}`;
+      alert(`🎉 Airdrop successful! 25,000 DUCK tokens sent!\n\nNote: The token may be hidden in your wallet. Please check your token management settings to see DUCK.\n\nTransaction: ${result.signature}\n\nView on explorer: ${explorerUrl}`);
+    } else {
+      let errorMessage = 'Airdrop failed';
+      if (result.error === 'already_claimed') {
+        errorMessage = 'This wallet has already claimed the airdrop. Each wallet can only claim once.';
+      } else if (result.error === 'already_has_tokens') {
+        errorMessage = 'This wallet already has DUCK tokens. Each wallet can only claim airdrop once.';
+      } else if (result.error === 'already_claimed_or_has_balance') {
+        errorMessage = 'You have already claimed airdrop or have DUCK balance';
+      } else if (result.error === 'insufficient_token_balance') {
+        errorMessage = 'Airdrop wallet has insufficient DUCK tokens';
+      } else if (result.error.includes('env')) {
+        errorMessage = 'Server configuration error. Please try again later.';
+      } else {
+        errorMessage = result.error || 'Unknown error';
+      }
+      alert(`❌ ${errorMessage}`);
+    }
+
+  } catch (error) {
+    console.error('Airdrop error:', error);
+    
+    if (error.message.includes('HTML page')) {
+      alert('❌ API configuration error. Please check if the API is properly deployed and environment variables are set in Vercel.');
+    } else if (error.message.includes('404')) {
+      alert('❌ Airdrop service is currently unavailable. Please try again later.');
+    } else if (error.message.includes('Failed to fetch')) {
+      alert('❌ Network error. Please check your connection and try again.');
+    } else if (error.message.includes('Invalid JSON')) {
+      alert('❌ Server returned an invalid response. Please check API configuration.');
+    } else {
+      alert(`❌ Airdrop failed: ${error.message}`);
+    }
+  } finally {
+    this.textContent = 'airdrop';
+    this.disabled = false;
+  }
+});
     const result = await response.json();
     console.log('Airdrop API response:', result);
 
@@ -1571,4 +1633,5 @@ document.getElementById('airdropBtn').addEventListener('click', async function()
     });
 </script>
 </body>
+
 </html>
